@@ -1,34 +1,98 @@
 #include <iostream>
 #include <cstring>
 using namespace std;
+#define INF 987654231
 #define STACK_SIZE 50
 
 int call_stack[STACK_SIZE];
 char info_stack[STACK_SIZE][20];
-int SP=-1;
-int FP=-1;
+int SP=-INF;
+int FP=-INF;
+
+bool isEmpty() {
+    return (SP==-INF);
+}
+
+bool isFull() {
+    return (SP+1==STACK_SIZE);
+}
+
+int size() {
+    return SP+1; 
+}
+
+int top() {
+    if(isEmpty()) {
+        cout<<"Stack is empty"<<"\n";
+        return 0;
+    }
+
+    return call_stack[SP];
+}
+
+void clear() {
+    SP=-INF;
+    FP=-INF;
+    
+    for(int i=0; i<STACK_SIZE; i++) {
+        call_stack[i]=0;
+        strcpy(info_stack[i], "");
+    }
+}
 
 void push_value(int value, const char* info) {
-    SP++;
-    call_stack[SP]=value; 
+    if(SP+1>=STACK_SIZE) {
+        cout<<"Stack Overflow : "<<info<<"\n";
+        return;
+    }
+	
+    if(SP==-INF)
+        SP=0;
+    else
+        SP++;
+    call_stack[SP]=value;
     strcpy(info_stack[SP], info);
 }
 
 void push_SFP(const char* info) {
-    SP++;
+    if(SP+1>=STACK_SIZE) {
+        cout<<"Stack Overflow : "<<info<<"\n";
+        return;
+    }
+	
+    if(SP==-INF)
+        SP=0;
+    else
+        SP++;
     call_stack[SP]=FP;
     strcpy(info_stack[SP], info);
 }
 
 void push_RA() {
-    SP++;
+    if(SP+1>=STACK_SIZE) {
+        cout<<"Stack Overflow"<<"\n";
+        return;
+    }
+	
+    if(SP==-INF)
+        SP=0;
+    else
+        SP++;
     call_stack[SP]=-1;
     strcpy(info_stack[SP], "Return Address");
 }
 
 int pop() {
+    if(SP==-INF) {
+        cout<<"Stack Underflow";
+        return 0;
+    }
+
     int val=call_stack[SP];
-    SP--;
+    if(SP==-1)
+        SP=-INF;
+    else
+        SP--;
     return val;
 }
 
