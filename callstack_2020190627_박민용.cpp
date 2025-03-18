@@ -48,8 +48,10 @@ void push_value(int value, const char* info) {
 	
     if(SP==-INF)
         SP=0;
-    else
+    
+	else
         SP++;
+	
     call_stack[SP]=value;
     strcpy(info_stack[SP], info);
 }
@@ -62,8 +64,10 @@ void push_SFP(const char* info) {
 	
     if(SP==-INF)
         SP=0;
+	
     else
         SP++;
+
     call_stack[SP]=FP;
     strcpy(info_stack[SP], info);
 }
@@ -76,8 +80,10 @@ void push_RA() {
 	
     if(SP==-INF)
         SP=0;
+
     else
         SP++;
+
     call_stack[SP]=-1;
     strcpy(info_stack[SP], "Return Address");
 }
@@ -89,10 +95,13 @@ int pop() {
     }
 
     int val=call_stack[SP];
+    
     if(SP==-1)
         SP=-INF;
+    
     else
         SP--;
+
     return val;
 }
 
