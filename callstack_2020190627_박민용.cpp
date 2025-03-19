@@ -49,7 +49,7 @@ void push_value(int value, const char* info) {
     if(SP==-INF)
         SP=0;
     
-	else
+    else
         SP++;
 	
     call_stack[SP]=value;
