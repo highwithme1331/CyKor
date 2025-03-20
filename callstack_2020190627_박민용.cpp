@@ -48,7 +48,7 @@ void push_value(int value, const char* info) {
 	
     if(SP==-INF)
         SP=0;
-    
+
     else
         SP++;
 	
@@ -64,7 +64,7 @@ void push_SFP(const char* info) {
 	
     if(SP==-INF)
         SP=0;
-	
+
     else
         SP++;
 
@@ -98,7 +98,7 @@ int pop() {
     
     if(SP==-1)
         SP=-INF;
-    
+
     else
         SP--;
 
@@ -116,13 +116,13 @@ void print_stack() {
     for(int i=SP; i>=0; i--) {
         if(call_stack[i]!=-1)
             cout<<i<<" : "<<info_stack[i]<<" = "<<call_stack[i];
-		
+
         else
             cout<<i<<" : "<<info_stack[i];
 
         if(i==SP)
 			cout<<"    <=== [esp]";
-		
+
         else if(i==FP) 
 			cout<<"    <=== [ebp]";
 		
@@ -143,11 +143,17 @@ void func1(int arg1, int arg2, int arg3) {
     push_RA();
     push_SFP("func1 SFP");
     FP=SP;
-    push_value(100, "var_1");
+    if(SP+1>=STACK_SIZE) {
+        cout<<"Stack Overflow"<<"\n";
+        return;
+    }
+    SP++;
+    call_stack[SP]=100;
+    strcpy(info_stack[SP], "var_1");
     print_stack();
 
     func2(11, 13);
-    pop(); 
+    SP--;
     SP=FP;
     int before_FP=pop();
     FP=before_FP;
@@ -164,11 +170,17 @@ void func2(int arg1, int arg2) {
     push_RA();
     push_SFP("func2 SFP");
     FP=SP;
-    push_value(200, "var_2");
+    if(SP+1>=STACK_SIZE) {
+        cout<<"Stack Overflow"<<"\n";
+        return;
+    }
+    SP++;
+    call_stack[SP]=200;
+    strcpy(info_stack[SP], "var_2");
     print_stack();
-
+	
     func3(77);
-    pop();
+    SP--;
     SP=FP;
     int before_FP=pop();
     FP=before_FP;
@@ -183,12 +195,24 @@ void func3(int arg1) {
     push_RA();
     push_SFP("func3 SFP");
     FP=SP;
-    push_value(300, "var_3");
-    push_value(400, "var_4");
+    if(SP+1>=STACK_SIZE) {
+        cout<<"Stack Overflow"<<"\n";
+        return;
+    }
+    SP++;
+    call_stack[SP]=300;
+    strcpy(info_stack[SP], "var_3");
+    if(SP+1>=STACK_SIZE) {
+        cout<<"Stack Overflow in func3 (var_4)"<<"\n";
+        return;
+    }
+    SP++;
+    call_stack[SP]=400;
+    strcpy(info_stack[SP], "var_4");
     print_stack();
-	
-    pop();
-    pop();
+
+    SP--;
+    SP--;
     SP=FP;
     int before_FP=pop();
     FP=before_FP;
