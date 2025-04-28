@@ -22,10 +22,12 @@ static void reap_zombies() {
 }
 
 typedef int (*builtin_func)(char **);
+
 typedef struct {
     const char *name;
     builtin_func func;
 } BuiltinCommand;
+
 int cmd_cd(char **argv) {
     const char *dest=argv[1] ? argv[1] : getenv("HOME");
     
@@ -34,6 +36,7 @@ int cmd_cd(char **argv) {
 	
     return 0;
 }
+
 int cmd_pwd(char **argv) {
     char cwd[PATH_MAX];
 	
@@ -45,12 +48,15 @@ int cmd_pwd(char **argv) {
 	
     return 0;
 }
+
 int cmd_exit(char **argv) {
     exit(0);
 }
+
 int cmd_echo(char **argv) {
     int i=1;
     int newline=1;
+	
     if(argv[1]&&strcmp(argv[1], "-n")==0) {
         newline=0;
         i=2;
@@ -68,12 +74,14 @@ int cmd_echo(char **argv) {
 
     return 0;
 }
+
 int cmd_history(char **argv) {
     for(int i=0; i<history_count; i++)
         printf("%4d  %s", i+1, history[i]);
 	
     return 0;
 }
+
 int cmd_help(char **argv) {
     puts("Supported built-in commands:");
     puts("cd [dir] Change directory");
@@ -85,6 +93,7 @@ int cmd_help(char **argv) {
 	
     return 0;
 }
+
 BuiltinCommand builtins[]={
     {"cd", cmd_cd},
     {"pwd", cmd_pwd},
@@ -94,6 +103,7 @@ BuiltinCommand builtins[]={
     {"help", cmd_help},
     {NULL, NULL}
 };
+
 int builtin(char **argv) {
     if(argv[0]==NULL) 
 		return -1;
