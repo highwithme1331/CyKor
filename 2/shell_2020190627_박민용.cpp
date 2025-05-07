@@ -1,20 +1,20 @@
 #define _GNU_SOURCE
+#include <errno.h>
 #include <stdio.h>
-#include <libgen.h>
-#include <limits.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
-#include <errno.h>
-#define MAX_ARGS  128
-#define MAX_PIPES 32
+#include <libgen.h>
+#include <limits.h>
+#include <unistd.h>
+#define MAX_ARGS 128
 #define MAX_HISTORY 1024
 #define MAX_LINE 4096
+#define MAX_PIPES 32
 char *history[MAX_HISTORY];
 int history_count=0;
 
-static void reap_zombies() {
+static void remove_zombies() {
     int status;
 	
     while(waitpid(-1, &status, WNOHANG)>0) 
@@ -26,7 +26,7 @@ typedef int (*builtin_func)(char **);
 typedef struct {
     const char *name;
     builtin_func func;
-} BuiltinCommand;
+} bulitincmd;
 
 int cmd_cd(char **argv) {
     const char *dest=argv[1] ? argv[1] : getenv("HOME");
@@ -94,7 +94,7 @@ int cmd_help(char **argv) {
     return 0;
 }
 
-BuiltinCommand builtins[]={
+bulitincmd builtincmds[]={
     {"cd", cmd_cd},
     {"pwd", cmd_pwd},
     {"exit", cmd_exit},
@@ -108,9 +108,9 @@ int builtin(char **argv) {
     if(argv[0]==NULL) 
 		return -1;
 
-    for(int i=0; builtins[i].name!=NULL; i++)
-        if(strcmp(argv[0], builtins[i].name)==0)
-            return builtins[i].func(argv);
+    for(int i=0; builtincmds[i].name!=NULL; i++)
+        if(strcmp(argv[0], builtincmds[i].name)==0)
+            return builtincmds[i].func(argv);
 
     return -1;
 }
@@ -118,15 +118,15 @@ int builtin(char **argv) {
 int run_pipeline(char *cmdline, int bg) {
 	char *seg_save;
 	char *segment=strtok_r(cmdline, "|", &seg_save);
-	int in_fd=STDIN_FILENO;
+	int input_fd=STDIN_FILENO;
 	pid_t pids[MAX_PIPES];
-	int n_proc=0;
+	int pid_count=0;
 	int last_status=0;
 
 	while(segment) {
 		char *next=strtok_r(NULL, "|", &seg_save);
 		int fds[2]; 
-		int out_fd=STDOUT_FILENO;
+		int output_fd=STDOUT_FILENO;
 
 		if(next) {
 			if(pipe(fds)==-1) { 
@@ -134,21 +134,21 @@ int run_pipeline(char *cmdline, int bg) {
 				return 1; 
 			}
 				
-			out_fd=fds[1];
+			output_fd=fds[1];
 		}
 
-		char *argv[MAX_ARGS]; 
-		int argc=0;
+		char *args[MAX_ARGS]; 
+		int arg_count=0;
 		int overflow=0;
 		char *tok=strtok(segment," \t\n");
 		
 		while(tok) {
-			if(argc>=MAX_ARGS-1) {
+			if(arg_count>=MAX_ARGS-1) {
 				overflow=1; 
 				break;
 			}
 		
-			argv[argc++]=tok;
+			args[arg_count++]=tok;
 			tok=strtok(NULL, " \t\n");
 		}
 
@@ -157,15 +157,15 @@ int run_pipeline(char *cmdline, int bg) {
 			return 1;
 		}
 		
-		argv[argc]=NULL;
+		args[arg_count]=NULL;
 		
-		if(argc==0) { 
+		if(arg_count==0) { 
 			segment=next; 
 			continue; 
 		}
 
-		if(builtin(argv)==0) {
-			if(next||in_fd!=STDIN_FILENO)
+		if(builtin(args)==0) {
+			if(next||input_fd!=STDIN_FILENO)
 				fprintf(stderr, "myshell:cannot be piped\n");
 			
 			last_status=0;
@@ -175,21 +175,22 @@ int run_pipeline(char *cmdline, int bg) {
 			pid_t pid=fork();
 			
 			if(pid==0) {
-				if(in_fd!=STDIN_FILENO) 
-					dup2(in_fd,STDIN_FILENO);
+				if(input_fd!=STDIN_FILENO) 
+					dup2(input_fd,STDIN_FILENO);
 				
-				if(out_fd!=STDOUT_FILENO) 
-					dup2(out_fd,STDOUT_FILENO);
+				if(output_fd!=STDOUT_FILENO) 
+					dup2(output_fd,STDOUT_FILENO);
 				
 				if(next) 
 					close(fds[0]);
 				
-				execvp(argv[0],argv);
-				perror("execvp"); _exit(127);
+				execvp(args[0],args);
+				perror("execvp"); 
+				_exit(127);
 			}
 			
 			else if(pid>0) 
-				pids[n_proc++]=pid;
+				pids[pid_count++]=pid;
 			
 			else {
 				perror("fork");
@@ -197,29 +198,29 @@ int run_pipeline(char *cmdline, int bg) {
 			}
 		}
 
-		if(in_fd!=STDIN_FILENO)
-			close(in_fd);
+		if(input_fd!=STDIN_FILENO)
+			close(input_fd);
 		
-		if(out_fd!=STDOUT_FILENO) 
-			close(out_fd);
+		if(output_fd!=STDOUT_FILENO) 
+			close(output_fd);
 		
-		in_fd=next?fds[0]:STDIN_FILENO;
+		input_fd=next?fds[0]:STDIN_FILENO;
 		
 		segment=next;
 	}
 	
 	if(!bg) {
-        for(int i=0; i<n_proc; i++) {
+        for(int i=0; i<pid_count; i++) {
             int st; 
 			waitpid(pids[i], &st, 0);
             
-			if(i==n_proc-1) 
+			if(i==pid_count-1) 
 				last_status=WIFEXITED(st)?WEXITSTATUS(st):1;
         }
     }
 	
 	else 
-        printf("[bg pid %d]\n", pids[n_proc-1]);
+        printf("[bg pid %d]\n", pids[pid_count-1]);
 
 	return last_status;
 }
@@ -309,9 +310,11 @@ int main() {
 	size_t len=0;
 	
 	while(1) {
-		reap_zombies();
-		getcwd(cwd,sizeof(cwd));
-		printf("[%s]$ ",basename(cwd));
+		remove_zombies();
+		if(getcwd(cwd,sizeof(cwd)))
+			printf("[%s]$ ", basename(cwd));
+		else
+			perror("getcwd");
 		fflush(stdout);
 
 		if(getline(&line, &len, stdin)==-1) 
